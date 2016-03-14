@@ -31,7 +31,7 @@ else:
     micro_mod_nodevalues = pd.read_csv('../Data/microarray/microarray_metabolic_mod_nodevalues.csv', sep=',', index_col=0, header=0)
     micro_signaling_genes = pd.read_csv('../Data/microarray/microarray_signaling_genes.csv', sep=',', index_col=0, header=0)
     micro_design = pd.read_csv('../Data/microarray/microarray_design.csv', index_col=1)
-    micro_design.columns = [u'idx', u'Drug/Chemical', u'Effect', u'Set']
+    micro_design.columns = [u'idx', u'Effect', u'Drug/Chemical', u'Set']
 
 
     print "micro_all_genes:", micro_all_genes.shape
