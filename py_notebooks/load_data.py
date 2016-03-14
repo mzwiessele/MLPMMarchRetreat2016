@@ -17,8 +17,8 @@ if dtype.lower() in 'rnaseq':
     print "rnaseq_all_genes:", rnaseq_all_genes.shape
     print "rnaseq_effector_genes:", rnaseq_effector_genes.shape
     print "rnaseq_mod_activities:", rnaseq_mod_activities.shape
-    print "rnaseq_mod_genevals:", rnaseq_mod_genevalues.shape
-    print 'rnaseq_mod_nodevals:', rnaseq_mod_nodevalues.shape
+    print "rnaseq_mod_genevalues:", rnaseq_mod_genevalues.shape
+    print 'rnaseq_mod_nodevalues:', rnaseq_mod_nodevalues.shape
     print 'rnaseq_signaling_genes:', rnaseq_signaling_genes.shape
     print 'rnaseq_design:', rnaseq_design.shape
 else:
@@ -37,7 +37,7 @@ else:
     print "micro_all_genes:", micro_all_genes.shape
     print "micro_effector_genes:", micro_effector_genes.shape
     print "micro_mod_activities:", micro_mod_activities.shape
-    print "micro_mod_genevals:", micro_mod_genevalues.shape
-    print 'micro_mod_nodevals:', micro_mod_nodevalues.shape
+    print "micro_mod_genevalues:", micro_mod_genevalues.shape
+    print 'micro_mod_nodevalues:', micro_mod_nodevalues.shape
     print 'micro_signaling_genes:', micro_signaling_genes.shape
     print 'micro_design:', micro_design.shape
