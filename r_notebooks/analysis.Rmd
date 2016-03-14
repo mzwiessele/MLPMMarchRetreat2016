@@ -1,0 +1,23 @@
+#### Notebook : MLPM retreat Valencia
+
+```{r setup, message = FALSE}
+knitr::opts_chunk$set(error = FALSE, warning = FALSE, fig.width = 8, fig.height = 8, dev = "pdf", fig.keep = "high", fig.path = "figure/", cache.path = "cache/")
+set.seed(35875954)
+```
+
+# Load data
+
+```{r data, cache = TRUE}
+datapath <- '../Data/RNASeq/'
+fnames <- list.files(path = datapath, pattern = '[.]csv$', full.names = FALSE)
+objnames <- gsub('[.]csv$', '', fnames)
+for (obj in objnames) {
+  x <- read.csv(paste0(datapath, obj, '.csv'), sep = ',', header = TRUE, row.names = 1)
+  rownames(x) <- gsub('[^[:alnum:]_]', '_', rownames(x))
+  if (!grepl('design', obj)) x <- t(x) # observations in rows and features in col
+  assign(obj, x)
+  cat('==============> ', obj, '<==============\n')
+  print(dim(get(obj)))
+}
+```
+
