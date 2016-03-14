@@ -1,13 +1,19 @@
-#### Notebook : MLPM retreat Valencia
+# Notebook : MLPM retreat Valencia
 
 ```{r setup, message = FALSE}
-knitr::opts_chunk$set(error = FALSE, warning = FALSE, fig.width = 8, fig.height = 8, dev = "pdf", fig.keep = "high", fig.path = "figure/", cache.path = "cache/")
+knitr::opts_chunk$set(error = FALSE, warning = FALSE, fig.width = 12, fig.height = 8, dev = "pdf", fig.keep = "high", fig.path = "figure/", cache.path = "cache/")
 set.seed(35875954)
+
+library(caret)
+library(pcaPP)
+library(kernlab)
+source('predictors.R')
 ```
 
 # Load data
 
 ```{r data, cache = TRUE}
+# read in datasets
 datapath <- '../Data/RNASeq/'
 fnames <- list.files(path = datapath, pattern = '[.]csv$', full.names = FALSE)
 objnames <- gsub('[.]csv$', '', fnames)
@@ -19,5 +25,32 @@ for (obj in objnames) {
   cat('==============> ', obj, '<==============\n')
   print(dim(get(obj)))
 }
+# just some checking on samplelist
+xlist <- objnames[!grepl('design', objnames)]
+for (xname in xlist) {
+  stopifnot(isTRUE(all.equal(rownames(get(xname)), as.character(as.character(rnaseq_design$SampleID_RNASeq)))))
+}
+# generate train2test
+trainidx <- grep('train', rnaseq_design$NA., ignore.case = TRUE)
+table(rnaseq_design$NA.)
+# generate labels
+effect.grps <- as.factor(rnaseq_design$Effect)
+```
+
+# SVM
+
+```{r svm, cache = TRUE, message = FALSE}
+xname <- 'rnaseq_effector_path_vals'
+yname <- 'effect.grps'
+kf <- 'linear'
+res <- perfSVM(model = paste('ksvm', kf, sep = '_AAA_'), prefix = paste(xname, yname, sep = '_AAA_'), 
+               xdata = get(xname), grp = get(yname), kf = kf, tr2tstFolds = trainidx)
+res$acc
+```
+
+# Session info
+
+```{r session_info}
+devtools::session_info()
 ```
 
