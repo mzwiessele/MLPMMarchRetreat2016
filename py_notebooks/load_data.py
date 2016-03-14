@@ -4,7 +4,7 @@ dtype = sys.argv[1]
 
 if dtype.lower() in 'rnaseq':
     print "loading rnaseq data"
-    rnaseq_all_genes = pd.read_csv('../DataRNAseq_all_genes.csv', sep=',', index_col=0, header=0)
+    rnaseq_all_genes = pd.read_csv('../Data/RNASeq/RNAseq_all_genes.csv', sep=',', index_col=0, header=0)
     rnaseq_all_genes.index.name = 'Entrez_ID'
     rnaseq_effector_genes = pd.read_csv('../Data/RNASeq/rnaseq_effector_path_vals.csv', sep=',', index_col=0, header=0)
     rnaseq_mod_activities = pd.read_csv('../Data/RNASeq/rnaseq_metabolic_mod_activities.csv', sep=',', index_col=0, header=0)
