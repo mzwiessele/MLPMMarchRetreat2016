@@ -31,15 +31,15 @@ perfSVM <- function(model = 'ksvm', prefix, xdata, grp, tr2tstFolds, kf = c('lin
   tr2tstfoldscore <- lapply(tr2tstFolds, function(indepfold){
     foldIndices <- createMultiFolds(indepfold, k=nfolds, times=nrepeats)
     
-    message("Cross-validating ", appendLF = FALSE)
+    message("Cross-validating ", appendLF = TRUE)
     foldscore <- lapply(foldIndices, function(fold){
-      cat(' + New cv fold + ')
+      message(' + New cv fold + ', appendLF = FALSE)
       # inner loop
       kmcs <- centerScaleKernelMatrix(kmat[indepfold, indepfold], fold)
       
       ### SVM
       s <- sapply(Cpara_list, function(cpm){
-        cat('.')
+        message('.', appendLF = FALSE)
         pred <- classifierSVM(km=kmcs, trainidx=fold, traingrp=grp[indepfold[fold]], cpm=cpm)
         return(evaluateAcc(pred,grp[indepfold[-fold]]))
       })
@@ -50,14 +50,14 @@ perfSVM <- function(model = 'ksvm', prefix, xdata, grp, tr2tstFolds, kf = c('lin
     cvacc <- apply(as.matrix(as.data.frame(foldscore)),1,function(u){mean(u,na.rm=TRUE)})
     names(cvacc) <- names(Cpara_list) # SVM cv score (varying C)
     
-    message("Independent-validating ", appendLF = FALSE)
+    message("Independent-validating ", appendLF = TRUE)
     kmcs <- centerScaleKernelMatrix(kmat, indepfold)
     
     cpm <- Cpara_list[which.max(cvacc)]
     pred <- classifierSVM(km=kmcs, trainidx=indepfold, traingrp=grp[indepfold], cpm=cpm)
     acc <- evaluateAcc(pred,grp[-indepfold])
     
-    message('DONE!')
+    message('DONE!', appendLF = TRUE)
     return(acc)
   })
   acc <- mean(unlist(tr2tstfoldscore), na.rm = TRUE)
