@@ -68,23 +68,40 @@ table(rnaseq_design$NA.)
 ```r
 # generate labels
 effect.grps <- as.factor(rnaseq_design$Effect)
+ylist <- c('effect.grps')
 ```
 
 # SVM
 
 
 ```r
-xname <- 'rnaseq_effector_path_vals'
-yname <- 'effect.grps'
 kf <- 'linear'
-res <- perfSVM(model = paste('ksvm', kf, sep = '_AAA_'), prefix = paste(xname, yname, sep = '_AAA_'), 
-               xdata = get(xname), grp = get(yname), kf = kf, tr2tstFolds = trainidx)
-res$acc
+res <- list()
+i <- 1
+for (xname in xlist) {
+  for (yname in ylist) {
+    res[[i]] <- perfSVM(model = paste('ksvm', kf, sep = '_AAA_'), prefix = paste(xname, yname, sep = '_AAA_'), 
+                        xdata = get(xname), grp = get(yname), kf = kf, tr2tstFolds = trainidx)
+    i <- i + 1
+  }
+}
 ```
 
+# Plot
+
+
+```r
+dd <- data.frame()
+for (i in seq(length(res))) {
+  dd <- rbind(dd, 
+              data.frame(model = res[[i]]$model, prefix = res[[i]]$prefix, kf = res[[i]]$kf, acc = res[[i]]$acc))
+}
+ggplot(dd, aes(x = prefix, y = acc)) + 
+  geom_bar(aes(fill = prefix), stat="identity") + 
+  theme(axis.text.x = element_blank())
 ```
-## [1] 0.4047619
-```
+
+![plot of chunk plot](figure/plot-1.pdf)
 
 # Session info
 
@@ -105,7 +122,7 @@ devtools::session_info()
 ##  language (EN)                        
 ##  collate  en_US.UTF-8                 
 ##  tz       Europe/Paris                
-##  date     2016-03-14
+##  date     2016-03-15
 ```
 
 ```
@@ -128,6 +145,7 @@ devtools::session_info()
 ##  iterators      1.0.8   2015-10-13 CRAN (R 3.2.0)
 ##  kernlab      * 0.9-23  2016-01-26 CRAN (R 3.2.3)
 ##  knitr          1.12.3  2016-01-22 CRAN (R 3.2.3)
+##  labeling       0.3     2014-08-23 CRAN (R 3.1.2)
 ##  lattice      * 0.20-33 2015-07-14 CRAN (R 3.2.3)
 ##  lme4           1.1-11  2016-02-12 CRAN (R 3.2.3)
 ##  magrittr       1.5     2014-11-22 CRAN (R 3.2.0)
@@ -148,7 +166,6 @@ devtools::session_info()
 ##  quantreg       5.21    2016-02-13 CRAN (R 3.2.3)
 ##  Rcpp           0.12.3  2016-01-10 CRAN (R 3.2.3)
 ##  reshape2       1.4.1   2014-12-06 CRAN (R 3.1.2)
-##  rstudioapi     0.5     2016-01-24 CRAN (R 3.2.3)
 ##  scales         0.4.0   2016-02-26 CRAN (R 3.2.3)
 ##  SparseM        1.7     2015-08-15 CRAN (R 3.2.0)
 ##  stringi        1.0-1   2015-10-22 CRAN (R 3.2.0)

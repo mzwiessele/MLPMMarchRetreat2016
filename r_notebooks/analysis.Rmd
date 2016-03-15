@@ -35,17 +35,35 @@ trainidx <- grep('train', rnaseq_design$NA., ignore.case = TRUE)
 table(rnaseq_design$NA.)
 # generate labels
 effect.grps <- as.factor(rnaseq_design$Effect)
+ylist <- c('effect.grps')
 ```
 
 # SVM
 
 ```{r svm, cache = TRUE, message = FALSE}
-xname <- 'rnaseq_effector_path_vals'
-yname <- 'effect.grps'
 kf <- 'linear'
-res <- perfSVM(model = paste('ksvm', kf, sep = '_AAA_'), prefix = paste(xname, yname, sep = '_AAA_'), 
-               xdata = get(xname), grp = get(yname), kf = kf, tr2tstFolds = trainidx)
-res$acc
+res <- list()
+i <- 1
+for (xname in xlist) {
+  for (yname in ylist) {
+    res[[i]] <- perfSVM(model = paste('ksvm', kf, sep = '_AAA_'), prefix = paste(xname, yname, sep = '_AAA_'), 
+                        xdata = get(xname), grp = get(yname), kf = kf, tr2tstFolds = trainidx)
+    i <- i + 1
+  }
+}
+```
+
+# Plot
+
+```{r plot}
+dd <- data.frame()
+for (i in seq(length(res))) {
+  dd <- rbind(dd, 
+              data.frame(model = res[[i]]$model, prefix = res[[i]]$prefix, kf = res[[i]]$kf, acc = res[[i]]$acc))
+}
+ggplot(dd, aes(x = prefix, y = acc)) + 
+  geom_bar(aes(fill = prefix), stat="identity") + 
+  theme(axis.text.x = element_blank())
 ```
 
 # Session info
