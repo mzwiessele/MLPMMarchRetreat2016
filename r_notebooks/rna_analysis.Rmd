@@ -1,0 +1,106 @@
+# Notebook : RNAseq analysis
+
+```{r setup, message = FALSE}
+knitr::opts_chunk$set(error = FALSE, warning = FALSE, fig.width = 12, fig.height = 8, dev = "pdf", fig.keep = "high", fig.path = "rna_figure/", cache.path = "rna_cache/")
+set.seed(35875954)
+
+library(caret)
+library(pcaPP)
+library(kernlab)
+source('predictors.R')
+
+datapath <- '../Data/RNASeq/'
+```
+
+# Load data
+
+```{r data, cache = TRUE}
+# read in datasets
+fnames <- list.files(path = datapath, pattern = '[.]csv$', full.names = FALSE)
+objnames <- gsub('[.]csv$', '', fnames)
+for (obj in objnames) {
+  x <- read.csv(paste0(datapath, obj, '.csv'), sep = ',', header = TRUE, row.names = 1)
+  rownames(x) <- paste0('X_', gsub('[^[:alnum:]_]', '_', rownames(x)))
+  # a bit further modification
+  if (grepl('design', obj)) {
+    colnames(x) <- gsub('NA[.]', 'Train.Test', colnames(x))
+  } else {
+    x <- t(x) # observations in rows and features in col
+  }
+  assign(obj, x)
+  cat('==============> ', obj, '<==============\n')
+  print(dim(get(obj)))
+}
+# just some checking on samplelist
+xlist <- objnames[!grepl('design', objnames)]
+designobj <- setdiff(objnames, xlist)
+stopifnot(length(designobj) == 1)
+for (xname in xlist) {
+  stopifnot(isTRUE(all.equal(rownames(get(xname)), 
+                             as.character(get(designobj)[,grep('sample', colnames(get(designobj)), ignore.case = TRUE)]))))
+}
+# generate train2test
+trainidx <- grep('train', get(designobj)[,'Train.Test'], ignore.case = TRUE)
+table(get(designobj)[,'Train.Test'])
+# generate labels
+effect.grps <- as.factor(get(designobj)[,grep('effect', colnames(get(designobj)), ignore.case = TRUE)])
+table(effect.grps[trainidx])
+table(effect.grps[-trainidx])
+# groups with unknown labels
+ratio <- 0.25
+key <- 'unknown'
+new.grps <- as.character(effect.grps)
+train.char <- unique(new.grps[trainidx])
+test.char <- unique(new.grps[-trainidx])
+idx <- split(trainidx, factor(new.grps[trainidx]))
+for (i in seq(length(idx))) {
+  new.grps[sample(idx[[i]], ceiling(length(idx[[i]]) * ratio))] <- key # train
+}
+new.grps[which(new.grps %in% setdiff(test.char, train.char))] <- key # test
+new.grps <- as.factor(new.grps)
+table(new.grps[trainidx])
+table(new.grps[-trainidx])
+ylist <- c('effect.grps', 'new.grps')
+```
+
+# SVM
+
+```{r svm, cache = TRUE, message = FALSE}
+kflist <- c('linear', 'kendall')
+res <- list()
+i <- 1
+for (xname in xlist) {
+  for (yname in ylist) {
+    for (kf in kflist) {
+      res[[i]] <- perfSVM(model = 'ksvm', x_prefix = xname, y_prefix = yname, 
+                          xdata = get(xname), grp = get(yname), kf = kf, tr2tstFolds = trainidx)
+      i <- i + 1
+    }
+  }
+}
+```
+
+```{r svm_plot}
+dd <- data.frame()
+for (i in seq(length(res))) {
+  dd <- rbind(dd, 
+              data.frame(model = res[[i]]$model, kf = res[[i]]$kf, 
+                         x_prefix = res[[i]]$x_prefix, y_prefix = res[[i]]$y_prefix, 
+                         acc = res[[i]]$acc))
+}
+for (yname in ylist) {
+  p1 <- ggplot(subset(dd, y_prefix == yname), aes(x = x_prefix, y = acc)) + 
+    geom_bar(aes(fill = x_prefix), stat="identity", position = "dodge") + 
+    facet_wrap(~ kf) + 
+    ggtitle(paste0('predict for labels = ', yname)) + 
+    theme(axis.text.x = element_blank())
+  plot(p1)
+}
+```
+
+# Session info
+
+```{r session_info}
+devtools::session_info()
+```
+

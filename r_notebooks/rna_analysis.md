@@ -1,14 +1,16 @@
-# Notebook : MLPM retreat Valencia
+# Notebook : RNAseq analysis
 
 
 ```r
-knitr::opts_chunk$set(error = FALSE, warning = FALSE, fig.width = 12, fig.height = 8, dev = "pdf", fig.keep = "high", fig.path = "figure/", cache.path = "cache/")
+knitr::opts_chunk$set(error = FALSE, warning = FALSE, fig.width = 12, fig.height = 8, dev = "pdf", fig.keep = "high", fig.path = "rna_figure/", cache.path = "rna_cache/")
 set.seed(35875954)
 
 library(caret)
 library(pcaPP)
 library(kernlab)
 source('predictors.R')
+
+datapath <- '../Data/RNASeq/'
 ```
 
 # Load data
@@ -16,13 +18,17 @@ source('predictors.R')
 
 ```r
 # read in datasets
-datapath <- '../Data/RNASeq/'
 fnames <- list.files(path = datapath, pattern = '[.]csv$', full.names = FALSE)
 objnames <- gsub('[.]csv$', '', fnames)
 for (obj in objnames) {
   x <- read.csv(paste0(datapath, obj, '.csv'), sep = ',', header = TRUE, row.names = 1)
   rownames(x) <- paste0('X_', gsub('[^[:alnum:]_]', '_', rownames(x)))
-  if (!grepl('design', obj)) x <- t(x) # observations in rows and features in col
+  # a bit further modification
+  if (grepl('design', obj)) {
+    colnames(x) <- gsub('NA[.]', 'Train.Test', colnames(x))
+  } else {
+    x <- t(x) # observations in rows and features in col
+  }
   assign(obj, x)
   cat('==============> ', obj, '<==============\n')
   print(dim(get(obj)))
@@ -51,12 +57,15 @@ for (obj in objnames) {
 ```r
 # just some checking on samplelist
 xlist <- objnames[!grepl('design', objnames)]
+designobj <- setdiff(objnames, xlist)
+stopifnot(length(designobj) == 1)
 for (xname in xlist) {
-  stopifnot(isTRUE(all.equal(rownames(get(xname)), as.character(as.character(rnaseq_design$SampleID_RNASeq)))))
+  stopifnot(isTRUE(all.equal(rownames(get(xname)), 
+                             as.character(get(designobj)[,grep('sample', colnames(get(designobj)), ignore.case = TRUE)]))))
 }
 # generate train2test
-trainidx <- grep('train', rnaseq_design$NA., ignore.case = TRUE)
-table(rnaseq_design$NA.)
+trainidx <- grep('train', get(designobj)[,'Train.Test'], ignore.case = TRUE)
+table(get(designobj)[,'Train.Test'])
 ```
 
 ```
@@ -67,41 +76,100 @@ table(rnaseq_design$NA.)
 
 ```r
 # generate labels
-effect.grps <- as.factor(rnaseq_design$Effect)
-ylist <- c('effect.grps')
+effect.grps <- as.factor(get(designobj)[,grep('effect', colnames(get(designobj)), ignore.case = TRUE)])
+table(effect.grps[trainidx])
+```
+
+```
+## 
+##  Control Effect_1 Effect_2 Effect_3 Effect_4 Effect_5 Effect_6 Effect_7 
+##       18        9        9        9        8        9        0        0
+```
+
+```r
+table(effect.grps[-trainidx])
+```
+
+```
+## 
+##  Control Effect_1 Effect_2 Effect_3 Effect_4 Effect_5 Effect_6 Effect_7 
+##        6        9        9        0        0        0        9        9
+```
+
+```r
+# groups with unknown labels
+ratio <- 0.25
+key <- 'unknown'
+new.grps <- as.character(effect.grps)
+train.char <- unique(new.grps[trainidx])
+test.char <- unique(new.grps[-trainidx])
+idx <- split(trainidx, factor(new.grps[trainidx]))
+for (i in seq(length(idx))) {
+  new.grps[sample(idx[[i]], ceiling(length(idx[[i]]) * ratio))] <- key # train
+}
+new.grps[which(new.grps %in% setdiff(test.char, train.char))] <- key # test
+new.grps <- as.factor(new.grps)
+table(new.grps[trainidx])
+```
+
+```
+## 
+##  Control Effect_1 Effect_2 Effect_3 Effect_4 Effect_5  unknown 
+##       13        6        6        6        6        6       19
+```
+
+```r
+table(new.grps[-trainidx])
+```
+
+```
+## 
+##  Control Effect_1 Effect_2 Effect_3 Effect_4 Effect_5  unknown 
+##        6        9        9        0        0        0       18
+```
+
+```r
+ylist <- c('effect.grps', 'new.grps')
 ```
 
 # SVM
 
 
 ```r
-kf <- 'linear'
+kflist <- c('linear', 'kendall')
 res <- list()
 i <- 1
 for (xname in xlist) {
   for (yname in ylist) {
-    res[[i]] <- perfSVM(model = paste('ksvm', kf, sep = '_AAA_'), prefix = paste(xname, yname, sep = '_AAA_'), 
-                        xdata = get(xname), grp = get(yname), kf = kf, tr2tstFolds = trainidx)
-    i <- i + 1
+    for (kf in kflist) {
+      res[[i]] <- perfSVM(model = 'ksvm', x_prefix = xname, y_prefix = yname, 
+                          xdata = get(xname), grp = get(yname), kf = kf, tr2tstFolds = trainidx)
+      i <- i + 1
+    }
   }
 }
 ```
-
-# Plot
 
 
 ```r
 dd <- data.frame()
 for (i in seq(length(res))) {
   dd <- rbind(dd, 
-              data.frame(model = res[[i]]$model, prefix = res[[i]]$prefix, kf = res[[i]]$kf, acc = res[[i]]$acc))
+              data.frame(model = res[[i]]$model, kf = res[[i]]$kf, 
+                         x_prefix = res[[i]]$x_prefix, y_prefix = res[[i]]$y_prefix, 
+                         acc = res[[i]]$acc))
 }
-ggplot(dd, aes(x = prefix, y = acc)) + 
-  geom_bar(aes(fill = prefix), stat="identity") + 
-  theme(axis.text.x = element_blank())
+for (yname in ylist) {
+  p1 <- ggplot(subset(dd, y_prefix == yname), aes(x = x_prefix, y = acc)) + 
+    geom_bar(aes(fill = x_prefix), stat="identity", position = "dodge") + 
+    facet_wrap(~ kf) + 
+    ggtitle(paste0('predict for labels = ', yname)) + 
+    theme(axis.text.x = element_blank())
+  plot(p1)
+}
 ```
 
-![plot of chunk plot](figure/plot-1.pdf)
+![plot of chunk svm_plot](rna_figure/svm_plot-1.pdf)![plot of chunk svm_plot](rna_figure/svm_plot-2.pdf)
 
 # Session info
 
@@ -122,7 +190,7 @@ devtools::session_info()
 ##  language (EN)                        
 ##  collate  en_US.UTF-8                 
 ##  tz       Europe/Paris                
-##  date     2016-03-15
+##  date     2016-03-17
 ```
 
 ```
@@ -166,6 +234,7 @@ devtools::session_info()
 ##  quantreg       5.21    2016-02-13 CRAN (R 3.2.3)
 ##  Rcpp           0.12.3  2016-01-10 CRAN (R 3.2.3)
 ##  reshape2       1.4.1   2014-12-06 CRAN (R 3.1.2)
+##  rstudioapi     0.5     2016-01-24 CRAN (R 3.2.3)
 ##  scales         0.4.0   2016-02-26 CRAN (R 3.2.3)
 ##  SparseM        1.7     2015-08-15 CRAN (R 3.2.0)
 ##  stringi        1.0-1   2015-10-22 CRAN (R 3.2.0)

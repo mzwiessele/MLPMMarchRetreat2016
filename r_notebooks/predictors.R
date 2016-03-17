@@ -1,7 +1,8 @@
 
 # train-test --------------------------------------------------------------
 
-perfSVM <- function(model = 'ksvm', prefix, xdata, grp, tr2tstFolds, kf = c('linear', 'kendall', 'rbf', 'poly'),
+perfSVM <- function(model = 'ksvm', x_prefix = 'xdata', y_prefix = 'ydata', 
+                    xdata, grp, tr2tstFolds, kf = c('linear', 'kendall', 'rbf', 'poly'), 
                     Cpara_list = 10^(-3:3), nfolds = 5, nrepeats = 1, seed = 64649601){
   ## model and prefix are characters that are stored to indicate which method is implemented but essentially do nothing
   ## perfSVM basically runs multi-class kernel SVM
@@ -62,7 +63,7 @@ perfSVM <- function(model = 'ksvm', prefix, xdata, grp, tr2tstFolds, kf = c('lin
   })
   acc <- mean(unlist(tr2tstfoldscore), na.rm = TRUE)
 
-  return(list(model=model, prefix=prefix, kf=kf, Cpara_list=Cpara_list, acc=acc))
+  return(list(model=model, x_prefix=x_prefix, y_prefix=y_prefix, kf=kf, Cpara_list=Cpara_list, acc=acc))
 }
 
 
