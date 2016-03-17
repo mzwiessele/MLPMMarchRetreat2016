@@ -136,12 +136,13 @@ ylist <- c('effect.grps', 'new.grps')
 
 
 ```r
-kflist <- c('linear', 'kendall')
+kflist <- c('linear', 'kendall', 'rbf')
 res <- list()
 i <- 1
 for (xname in xlist) {
   for (yname in ylist) {
     for (kf in kflist) {
+      message('\n==========================> ',i,' <==========================\n')
       res[[i]] <- perfSVM(model = 'ksvm', x_prefix = xname, y_prefix = yname, 
                           xdata = get(xname), grp = get(yname), kf = kf, tr2tstFolds = trainidx)
       i <- i + 1
@@ -159,10 +160,60 @@ for (i in seq(length(res))) {
                          x_prefix = res[[i]]$x_prefix, y_prefix = res[[i]]$y_prefix, 
                          acc = res[[i]]$acc))
 }
+dd
+```
+
+```
+##    model      kf                        x_prefix    y_prefix       acc
+## 1   ksvm  linear                RNAseq_all_genes effect.grps 0.4047619
+## 2   ksvm kendall                RNAseq_all_genes effect.grps 0.3333333
+## 3   ksvm     rbf                RNAseq_all_genes effect.grps 0.3809524
+## 4   ksvm  linear                RNAseq_all_genes    new.grps 0.6666667
+## 5   ksvm kendall                RNAseq_all_genes    new.grps 0.5714286
+## 6   ksvm     rbf                RNAseq_all_genes    new.grps 0.7142857
+## 7   ksvm  linear       rnaseq_effector_path_vals effect.grps 0.4047619
+## 8   ksvm kendall       rnaseq_effector_path_vals effect.grps 0.3809524
+## 9   ksvm     rbf       rnaseq_effector_path_vals effect.grps 0.4047619
+## 10  ksvm  linear       rnaseq_effector_path_vals    new.grps 0.4285714
+## 11  ksvm kendall       rnaseq_effector_path_vals    new.grps 0.6666667
+## 12  ksvm     rbf       rnaseq_effector_path_vals    new.grps 0.6666667
+## 13  ksvm  linear rnaseq_metabolic_mod_activities effect.grps 0.2142857
+## 14  ksvm kendall rnaseq_metabolic_mod_activities effect.grps 0.3571429
+## 15  ksvm     rbf rnaseq_metabolic_mod_activities effect.grps 0.2142857
+## 16  ksvm  linear rnaseq_metabolic_mod_activities    new.grps 0.5476190
+## 17  ksvm kendall rnaseq_metabolic_mod_activities    new.grps 0.6190476
+## 18  ksvm     rbf rnaseq_metabolic_mod_activities    new.grps 0.5000000
+## 19  ksvm  linear rnaseq_metabolic_mod_genevalues effect.grps 0.2619048
+## 20  ksvm kendall rnaseq_metabolic_mod_genevalues effect.grps 0.4047619
+## 21  ksvm     rbf rnaseq_metabolic_mod_genevalues effect.grps 0.3095238
+## 22  ksvm  linear rnaseq_metabolic_mod_genevalues    new.grps 0.3333333
+## 23  ksvm kendall rnaseq_metabolic_mod_genevalues    new.grps 0.5238095
+## 24  ksvm     rbf rnaseq_metabolic_mod_genevalues    new.grps 0.5000000
+## 25  ksvm  linear rnaseq_metabolic_mod_nodevalues effect.grps 0.3809524
+## 26  ksvm kendall rnaseq_metabolic_mod_nodevalues effect.grps 0.4047619
+## 27  ksvm     rbf rnaseq_metabolic_mod_nodevalues effect.grps 0.4047619
+## 28  ksvm  linear rnaseq_metabolic_mod_nodevalues    new.grps 0.5714286
+## 29  ksvm kendall rnaseq_metabolic_mod_nodevalues    new.grps 0.6190476
+## 30  ksvm     rbf rnaseq_metabolic_mod_nodevalues    new.grps 0.5000000
+## 31  ksvm  linear                rnaseq_path_vals effect.grps 0.3571429
+## 32  ksvm kendall                rnaseq_path_vals effect.grps 0.3571429
+## 33  ksvm     rbf                rnaseq_path_vals effect.grps 0.3809524
+## 34  ksvm  linear                rnaseq_path_vals    new.grps 0.6190476
+## 35  ksvm kendall                rnaseq_path_vals    new.grps 0.5952381
+## 36  ksvm     rbf                rnaseq_path_vals    new.grps 0.5000000
+## 37  ksvm  linear          rnaseq_signaling_genes effect.grps 0.4047619
+## 38  ksvm kendall          rnaseq_signaling_genes effect.grps 0.3809524
+## 39  ksvm     rbf          rnaseq_signaling_genes effect.grps 0.4047619
+## 40  ksvm  linear          rnaseq_signaling_genes    new.grps 0.6666667
+## 41  ksvm kendall          rnaseq_signaling_genes    new.grps 0.5714286
+## 42  ksvm     rbf          rnaseq_signaling_genes    new.grps 0.7142857
+```
+
+```r
 for (yname in ylist) {
   p1 <- ggplot(subset(dd, y_prefix == yname), aes(x = x_prefix, y = acc)) + 
     geom_bar(aes(fill = x_prefix), stat="identity", position = "dodge") + 
-    facet_wrap(~ kf) + 
+    facet_wrap(~ kf) + ylim(0,1) + 
     ggtitle(paste0('predict for labels = ', yname)) + 
     theme(axis.text.x = element_blank())
   plot(p1)
@@ -234,7 +285,6 @@ devtools::session_info()
 ##  quantreg       5.21    2016-02-13 CRAN (R 3.2.3)
 ##  Rcpp           0.12.3  2016-01-10 CRAN (R 3.2.3)
 ##  reshape2       1.4.1   2014-12-06 CRAN (R 3.1.2)
-##  rstudioapi     0.5     2016-01-24 CRAN (R 3.2.3)
 ##  scales         0.4.0   2016-02-26 CRAN (R 3.2.3)
 ##  SparseM        1.7     2015-08-15 CRAN (R 3.2.0)
 ##  stringi        1.0-1   2015-10-22 CRAN (R 3.2.0)
