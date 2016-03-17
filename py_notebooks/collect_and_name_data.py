@@ -21,7 +21,7 @@ else:
         micro_mod_genevalues,#: (201, 105)
         micro_mod_nodevalues,#: (462, 105)
         micro_signaling_genes,#: (2184, 105)
-        micro_design,#: (105, 4)
+        #micro_design,#: (105, 4)
     ]
     design = micro_design
 
