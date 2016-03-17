@@ -66,12 +66,13 @@ ylist <- c('effect.grps', 'new.grps')
 # SVM
 
 ```{r svm, cache = TRUE, message = FALSE}
-kflist <- c('linear', 'kendall')
+kflist <- c('linear', 'kendall', 'rbf')
 res <- list()
 i <- 1
 for (xname in xlist) {
   for (yname in ylist) {
     for (kf in kflist) {
+      message('\n==========================> ',i,' <==========================\n')
       res[[i]] <- perfSVM(model = 'ksvm', x_prefix = xname, y_prefix = yname, 
                           xdata = get(xname), grp = get(yname), kf = kf, tr2tstFolds = trainidx)
       i <- i + 1
@@ -88,10 +89,11 @@ for (i in seq(length(res))) {
                          x_prefix = res[[i]]$x_prefix, y_prefix = res[[i]]$y_prefix, 
                          acc = res[[i]]$acc))
 }
+dd
 for (yname in ylist) {
   p1 <- ggplot(subset(dd, y_prefix == yname), aes(x = x_prefix, y = acc)) + 
     geom_bar(aes(fill = x_prefix), stat="identity", position = "dodge") + 
-    facet_wrap(~ kf) + 
+    facet_wrap(~ kf) + ylim(0,1) + 
     ggtitle(paste0('predict for labels = ', yname)) + 
     theme(axis.text.x = element_blank())
   plot(p1)

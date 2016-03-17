@@ -9,6 +9,8 @@ library(caret)
 library(pcaPP)
 library(kernlab)
 source('predictors.R')
+
+datapath <- '../Data/MicroArray/'
 ```
 
 # Load data
@@ -16,7 +18,6 @@ source('predictors.R')
 
 ```r
 # read in datasets
-datapath <- '../Data/MicroArray/'
 fnames <- list.files(path = datapath, pattern = '[.]csv$', full.names = FALSE)
 objnames <- gsub('[.]csv$', '', fnames)
 for (obj in objnames) {
@@ -135,12 +136,13 @@ ylist <- c('effect.grps', 'new.grps')
 
 
 ```r
-kflist <- c('linear', 'kendall')
+kflist <- c('linear', 'kendall', 'rbf')
 res <- list()
 i <- 1
 for (xname in xlist) {
   for (yname in ylist) {
     for (kf in kflist) {
+      message('\n==========================> ',i,' <==========================\n')
       res[[i]] <- perfSVM(model = 'ksvm', x_prefix = xname, y_prefix = yname, 
                           xdata = get(xname), grp = get(yname), kf = kf, tr2tstFolds = trainidx)
       i <- i + 1
@@ -158,10 +160,103 @@ for (i in seq(length(res))) {
                          x_prefix = res[[i]]$x_prefix, y_prefix = res[[i]]$y_prefix, 
                          acc = res[[i]]$acc))
 }
+dd
+```
+
+```
+##    model      kf                            x_prefix    y_prefix
+## 1   ksvm  linear                microarray_all_genes effect.grps
+## 2   ksvm kendall                microarray_all_genes effect.grps
+## 3   ksvm     rbf                microarray_all_genes effect.grps
+## 4   ksvm  linear                microarray_all_genes    new.grps
+## 5   ksvm kendall                microarray_all_genes    new.grps
+## 6   ksvm     rbf                microarray_all_genes    new.grps
+## 7   ksvm  linear       microarray_effector_path_vals effect.grps
+## 8   ksvm kendall       microarray_effector_path_vals effect.grps
+## 9   ksvm     rbf       microarray_effector_path_vals effect.grps
+## 10  ksvm  linear       microarray_effector_path_vals    new.grps
+## 11  ksvm kendall       microarray_effector_path_vals    new.grps
+## 12  ksvm     rbf       microarray_effector_path_vals    new.grps
+## 13  ksvm  linear microarray_metabolic_mod_activities effect.grps
+## 14  ksvm kendall microarray_metabolic_mod_activities effect.grps
+## 15  ksvm     rbf microarray_metabolic_mod_activities effect.grps
+## 16  ksvm  linear microarray_metabolic_mod_activities    new.grps
+## 17  ksvm kendall microarray_metabolic_mod_activities    new.grps
+## 18  ksvm     rbf microarray_metabolic_mod_activities    new.grps
+## 19  ksvm  linear microarray_metabolic_mod_genevalues effect.grps
+## 20  ksvm kendall microarray_metabolic_mod_genevalues effect.grps
+## 21  ksvm     rbf microarray_metabolic_mod_genevalues effect.grps
+## 22  ksvm  linear microarray_metabolic_mod_genevalues    new.grps
+## 23  ksvm kendall microarray_metabolic_mod_genevalues    new.grps
+## 24  ksvm     rbf microarray_metabolic_mod_genevalues    new.grps
+## 25  ksvm  linear microarray_metabolic_mod_nodevalues effect.grps
+## 26  ksvm kendall microarray_metabolic_mod_nodevalues effect.grps
+## 27  ksvm     rbf microarray_metabolic_mod_nodevalues effect.grps
+## 28  ksvm  linear microarray_metabolic_mod_nodevalues    new.grps
+## 29  ksvm kendall microarray_metabolic_mod_nodevalues    new.grps
+## 30  ksvm     rbf microarray_metabolic_mod_nodevalues    new.grps
+## 31  ksvm  linear                microarray_path_vals effect.grps
+## 32  ksvm kendall                microarray_path_vals effect.grps
+## 33  ksvm     rbf                microarray_path_vals effect.grps
+## 34  ksvm  linear                microarray_path_vals    new.grps
+## 35  ksvm kendall                microarray_path_vals    new.grps
+## 36  ksvm     rbf                microarray_path_vals    new.grps
+## 37  ksvm  linear          microarray_signaling_genes effect.grps
+## 38  ksvm kendall          microarray_signaling_genes effect.grps
+## 39  ksvm     rbf          microarray_signaling_genes effect.grps
+## 40  ksvm  linear          microarray_signaling_genes    new.grps
+## 41  ksvm kendall          microarray_signaling_genes    new.grps
+## 42  ksvm     rbf          microarray_signaling_genes    new.grps
+##           acc
+## 1  0.14285714
+## 2  0.11904762
+## 3  0.14285714
+## 4  0.30952381
+## 5  0.42857143
+## 6  0.42857143
+## 7  0.14285714
+## 8  0.11904762
+## 9  0.14285714
+## 10 0.42857143
+## 11 0.45238095
+## 12 0.42857143
+## 13 0.09523810
+## 14 0.09523810
+## 15 0.07142857
+## 16 0.42857143
+## 17 0.42857143
+## 18 0.47619048
+## 19 0.16666667
+## 20 0.14285714
+## 21 0.14285714
+## 22 0.23809524
+## 23 0.42857143
+## 24 0.26190476
+## 25 0.11904762
+## 26 0.11904762
+## 27 0.09523810
+## 28 0.42857143
+## 29 0.45238095
+## 30 0.45238095
+## 31 0.14285714
+## 32 0.11904762
+## 33 0.09523810
+## 34 0.40476190
+## 35 0.45238095
+## 36 0.42857143
+## 37 0.16666667
+## 38 0.14285714
+## 39 0.14285714
+## 40 0.42857143
+## 41 0.45238095
+## 42 0.47619048
+```
+
+```r
 for (yname in ylist) {
   p1 <- ggplot(subset(dd, y_prefix == yname), aes(x = x_prefix, y = acc)) + 
     geom_bar(aes(fill = x_prefix), stat="identity", position = "dodge") + 
-    facet_wrap(~ kf) + 
+    facet_wrap(~ kf) + ylim(0,1) + 
     ggtitle(paste0('predict for labels = ', yname)) + 
     theme(axis.text.x = element_blank())
   plot(p1)
@@ -233,6 +328,7 @@ devtools::session_info()
 ##  quantreg       5.21    2016-02-13 CRAN (R 3.2.3)
 ##  Rcpp           0.12.3  2016-01-10 CRAN (R 3.2.3)
 ##  reshape2       1.4.1   2014-12-06 CRAN (R 3.1.2)
+##  rstudioapi     0.5     2016-01-24 CRAN (R 3.2.3)
 ##  scales         0.4.0   2016-02-26 CRAN (R 3.2.3)
 ##  SparseM        1.7     2015-08-15 CRAN (R 3.2.0)
 ##  stringi        1.0-1   2015-10-22 CRAN (R 3.2.0)
