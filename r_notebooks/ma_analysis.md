@@ -129,14 +129,15 @@ table(new.grps[-trainidx])
 ```
 
 ```r
-ylist <- c('effect.grps', 'new.grps')
+ylist <- c('new.grps')
 ```
 
 # SVM
 
 
 ```r
-kflist <- c('linear', 'kendall', 'rbf')
+# kflist <- c('linear', 'kendall', 'rbf')
+kflist <- c('kendall')
 res <- list()
 i <- 1
 for (xname in xlist) {
@@ -155,101 +156,33 @@ for (xname in xlist) {
 ```r
 dd <- data.frame()
 for (i in seq(length(res))) {
+  accind <- matrix(res[[i]]$accind, nrow = 1)
+  colnames(accind) <- names(res[[i]]$accind)
   dd <- rbind(dd, 
               data.frame(model = res[[i]]$model, kf = res[[i]]$kf, 
                          x_prefix = res[[i]]$x_prefix, y_prefix = res[[i]]$y_prefix, 
-                         acc = res[[i]]$acc))
+                         acc = res[[i]]$acc, accind))
 }
 dd
 ```
 
 ```
-##    model      kf                            x_prefix    y_prefix
-## 1   ksvm  linear                microarray_all_genes effect.grps
-## 2   ksvm kendall                microarray_all_genes effect.grps
-## 3   ksvm     rbf                microarray_all_genes effect.grps
-## 4   ksvm  linear                microarray_all_genes    new.grps
-## 5   ksvm kendall                microarray_all_genes    new.grps
-## 6   ksvm     rbf                microarray_all_genes    new.grps
-## 7   ksvm  linear       microarray_effector_path_vals effect.grps
-## 8   ksvm kendall       microarray_effector_path_vals effect.grps
-## 9   ksvm     rbf       microarray_effector_path_vals effect.grps
-## 10  ksvm  linear       microarray_effector_path_vals    new.grps
-## 11  ksvm kendall       microarray_effector_path_vals    new.grps
-## 12  ksvm     rbf       microarray_effector_path_vals    new.grps
-## 13  ksvm  linear microarray_metabolic_mod_activities effect.grps
-## 14  ksvm kendall microarray_metabolic_mod_activities effect.grps
-## 15  ksvm     rbf microarray_metabolic_mod_activities effect.grps
-## 16  ksvm  linear microarray_metabolic_mod_activities    new.grps
-## 17  ksvm kendall microarray_metabolic_mod_activities    new.grps
-## 18  ksvm     rbf microarray_metabolic_mod_activities    new.grps
-## 19  ksvm  linear microarray_metabolic_mod_genevalues effect.grps
-## 20  ksvm kendall microarray_metabolic_mod_genevalues effect.grps
-## 21  ksvm     rbf microarray_metabolic_mod_genevalues effect.grps
-## 22  ksvm  linear microarray_metabolic_mod_genevalues    new.grps
-## 23  ksvm kendall microarray_metabolic_mod_genevalues    new.grps
-## 24  ksvm     rbf microarray_metabolic_mod_genevalues    new.grps
-## 25  ksvm  linear microarray_metabolic_mod_nodevalues effect.grps
-## 26  ksvm kendall microarray_metabolic_mod_nodevalues effect.grps
-## 27  ksvm     rbf microarray_metabolic_mod_nodevalues effect.grps
-## 28  ksvm  linear microarray_metabolic_mod_nodevalues    new.grps
-## 29  ksvm kendall microarray_metabolic_mod_nodevalues    new.grps
-## 30  ksvm     rbf microarray_metabolic_mod_nodevalues    new.grps
-## 31  ksvm  linear                microarray_path_vals effect.grps
-## 32  ksvm kendall                microarray_path_vals effect.grps
-## 33  ksvm     rbf                microarray_path_vals effect.grps
-## 34  ksvm  linear                microarray_path_vals    new.grps
-## 35  ksvm kendall                microarray_path_vals    new.grps
-## 36  ksvm     rbf                microarray_path_vals    new.grps
-## 37  ksvm  linear          microarray_signaling_genes effect.grps
-## 38  ksvm kendall          microarray_signaling_genes effect.grps
-## 39  ksvm     rbf          microarray_signaling_genes effect.grps
-## 40  ksvm  linear          microarray_signaling_genes    new.grps
-## 41  ksvm kendall          microarray_signaling_genes    new.grps
-## 42  ksvm     rbf          microarray_signaling_genes    new.grps
-##           acc
-## 1  0.14285714
-## 2  0.11904762
-## 3  0.14285714
-## 4  0.30952381
-## 5  0.42857143
-## 6  0.42857143
-## 7  0.14285714
-## 8  0.11904762
-## 9  0.14285714
-## 10 0.42857143
-## 11 0.45238095
-## 12 0.42857143
-## 13 0.09523810
-## 14 0.09523810
-## 15 0.07142857
-## 16 0.42857143
-## 17 0.42857143
-## 18 0.47619048
-## 19 0.16666667
-## 20 0.14285714
-## 21 0.14285714
-## 22 0.23809524
-## 23 0.42857143
-## 24 0.26190476
-## 25 0.11904762
-## 26 0.11904762
-## 27 0.09523810
-## 28 0.42857143
-## 29 0.45238095
-## 30 0.45238095
-## 31 0.14285714
-## 32 0.11904762
-## 33 0.09523810
-## 34 0.40476190
-## 35 0.45238095
-## 36 0.42857143
-## 37 0.16666667
-## 38 0.14285714
-## 39 0.14285714
-## 40 0.42857143
-## 41 0.45238095
-## 42 0.47619048
+##      model      kf                            x_prefix y_prefix       acc
+## acc   ksvm kendall                microarray_all_genes new.grps 0.4285714
+## acc1  ksvm kendall       microarray_effector_path_vals new.grps 0.4523810
+## acc2  ksvm kendall microarray_metabolic_mod_activities new.grps 0.4285714
+## acc3  ksvm kendall microarray_metabolic_mod_genevalues new.grps 0.4285714
+## acc4  ksvm kendall microarray_metabolic_mod_nodevalues new.grps 0.4523810
+## acc5  ksvm kendall                microarray_path_vals new.grps 0.4523810
+## acc6  ksvm kendall          microarray_signaling_genes new.grps 0.4523810
+##        Control Effect_1 Effect_2   unknown
+## acc  0.0000000        0        0 1.0000000
+## acc1 0.1666667        0        0 1.0000000
+## acc2 0.1666667        0        0 0.9444444
+## acc3 0.0000000        0        0 1.0000000
+## acc4 0.5000000        0        0 0.8888889
+## acc5 0.1666667        0        0 1.0000000
+## acc6 0.1666667        0        0 1.0000000
 ```
 
 ```r
@@ -263,7 +196,7 @@ for (yname in ylist) {
 }
 ```
 
-![plot of chunk svm_plot](ma_figure/svm_plot-1.pdf)![plot of chunk svm_plot](ma_figure/svm_plot-2.pdf)
+![plot of chunk svm_plot](ma_figure/svm_plot-1.pdf)
 
 # Session info
 
@@ -284,7 +217,7 @@ devtools::session_info()
 ##  language (EN)                        
 ##  collate  en_US.UTF-8                 
 ##  tz       Europe/Paris                
-##  date     2016-03-17
+##  date     2016-03-18
 ```
 
 ```

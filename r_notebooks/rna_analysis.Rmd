@@ -60,7 +60,7 @@ new.grps[which(new.grps %in% setdiff(test.char, train.char))] <- key # test
 new.grps <- as.factor(new.grps)
 table(new.grps[trainidx])
 table(new.grps[-trainidx])
-ylist <- c('effect.grps', 'new.grps')
+ylist <- c('new.grps')
 ```
 
 # SVM
@@ -85,10 +85,12 @@ for (xname in xlist) {
 ```{r svm_plot}
 dd <- data.frame()
 for (i in seq(length(res))) {
+  accind <- matrix(res[[i]]$accind, nrow = 1)
+  colnames(accind) <- names(res[[i]]$accind)
   dd <- rbind(dd, 
               data.frame(model = res[[i]]$model, kf = res[[i]]$kf, 
                          x_prefix = res[[i]]$x_prefix, y_prefix = res[[i]]$y_prefix, 
-                         acc = res[[i]]$acc, accind = matrix(res[[i]]$accind, nrow = 1)))
+                         acc = res[[i]]$acc, accind))
 }
 dd
 for (yname in ylist) {
