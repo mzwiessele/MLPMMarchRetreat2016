@@ -66,7 +66,8 @@ ylist <- c('effect.grps', 'new.grps')
 # SVM
 
 ```{r svm, cache = TRUE, message = FALSE}
-kflist <- c('linear', 'kendall', 'rbf')
+# kflist <- c('linear', 'kendall', 'rbf')
+kflist <- c('kendall')
 res <- list()
 i <- 1
 for (xname in xlist) {

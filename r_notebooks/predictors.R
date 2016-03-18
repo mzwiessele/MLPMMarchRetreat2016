@@ -60,7 +60,7 @@ perfSVM <- function(model = 'ksvm', x_prefix = 'xdata', y_prefix = 'ydata',
     accind <- evaluateIndivAcc(pred,grp[-indepfold])
 
     message('DONE!', appendLF = TRUE)
-    return(c(acc = acc, accind))
+    return(c(acc = acc, unlist(accind)))
   })
   tr2tstfoldscore <- do.call('rbind', tr2tstfoldscore)
   tr2tstfoldscore <- apply(tr2tstfoldscore, 2, mean, na.rm = TRUE)
