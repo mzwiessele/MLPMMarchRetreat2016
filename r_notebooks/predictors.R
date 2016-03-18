@@ -57,13 +57,18 @@ perfSVM <- function(model = 'ksvm', x_prefix = 'xdata', y_prefix = 'ydata',
     cpm <- Cpara_list[which.max(cvacc)]
     pred <- classifierSVM(km=kmcs, trainidx=indepfold, traingrp=grp[indepfold], cpm=cpm)
     acc <- evaluateAcc(pred,grp[-indepfold])
+    accind <- evaluateIndivAcc(pred,grp[-indepfold])
 
     message('DONE!', appendLF = TRUE)
-    return(acc)
+    return(c(acc = acc, accind))
   })
-  acc <- mean(unlist(tr2tstfoldscore), na.rm = TRUE)
+  tr2tstfoldscore <- do.call('rbind', tr2tstfoldscore)
+  tr2tstfoldscore <- apply(tr2tstfoldscore, 2, mean, na.rm = TRUE)
+  acc <- tr2tstfoldscore[1]
+  accind <- tr2tstfoldscore[-1]
 
-  return(list(model=model, x_prefix=x_prefix, y_prefix=y_prefix, kf=kf, Cpara_list=Cpara_list, acc=acc))
+  return(list(model=model, x_prefix=x_prefix, y_prefix=y_prefix, kf=kf, Cpara_list=Cpara_list, 
+              acc=acc, accind = accind))
 }
 
 
@@ -127,6 +132,17 @@ evaluateAcc <- function(predictions,observations){
     stop('Predictions and observations have different levels!')
 }
 
+evaluateIndivAcc <- function(predictions,observations)
+{
+  classes <- sort(unique(as.character(observations)))
+  accind <- list()
+  for (classname in classes) {
+    id <- which(as.character(observations) == classname)
+    s <- sum(as.character(predictions)[id] == classname) / length(id) # similar to True Positive
+    accind[[classname]] <- ifelse(is.na(s), 0, s)
+  }
+  return(accind)
+}
 
 # remove constants --------------------------------------------------------
 

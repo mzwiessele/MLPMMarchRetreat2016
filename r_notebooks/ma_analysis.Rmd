@@ -87,7 +87,7 @@ for (i in seq(length(res))) {
   dd <- rbind(dd, 
               data.frame(model = res[[i]]$model, kf = res[[i]]$kf, 
                          x_prefix = res[[i]]$x_prefix, y_prefix = res[[i]]$y_prefix, 
-                         acc = res[[i]]$acc))
+                         acc = res[[i]]$acc, accind = matrix(res[[i]]$accind, nrow = 1)))
 }
 dd
 for (yname in ylist) {
