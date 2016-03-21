@@ -3,7 +3,7 @@
 
 perfSVM <- function(model = 'ksvm', x_prefix = 'xdata', y_prefix = 'ydata', 
                     xdata, grp, tr2tstFolds, kf = c('linear', 'kendall', 'rbf', 'poly'), 
-                    kmat = NULL, Cpara_list = 10^(-3:3), nfolds = 5, nrepeats = 1, seed = 64649601){
+                    kmat = NULL, Cpara_list = 10^seq(-1,1,0.2), nfolds = 5, nrepeats = 1, seed = 64649601){
   ## model and prefix are characters that are stored to indicate which method is implemented but essentially do nothing
   ## xdata n*p feature matrix (including training and test parts)
   ## grp n-vector categorical labels
@@ -18,6 +18,9 @@ perfSVM <- function(model = 'ksvm', x_prefix = 'xdata', y_prefix = 'ydata',
     tr2tstFolds <- list(tr2tstFolds)
   }
   
+  # sigma for gaussian rbf
+  sigma <- unname(kernlab::sigest(xdata, scaled=F)['50%'])
+  
   if (!is.character(kf)) stop('provide kernel function as a character')
   kf <- match.arg(kf, several.ok = TRUE)
   
@@ -26,7 +29,7 @@ perfSVM <- function(model = 'ksvm', x_prefix = 'xdata', y_prefix = 'ydata',
     FUN[[i]] <- switch(kf[i],
                        linear = vanilladot(),
                        kendall = cor.fk,
-                       rbf = rbfdot(sigma = unname(sigest(xdata, scaled=F)['50%'])),
+                       rbf = rbfdot(sigma = sigma),
                        poly = polydot(degree = 2, scale = 1, offset = 0)
                        )
   }
