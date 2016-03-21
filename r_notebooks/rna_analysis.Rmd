@@ -102,7 +102,7 @@ for (yname in ylist) {
   p1 <- ggplot(dds, aes(x = x_prefix, y = values)) + 
     geom_bar(aes(fill = x_prefix), stat="identity", position = "dodge") + 
     facet_wrap(~ kf) + ylim(0,1) + 
-    ggtitle(paste0('predict for labels = ', yname)) + 
+    ggtitle(paste0('Overall acc for ', yname)) + 
     theme(axis.text.x = element_blank())
   plot(p1)
 }
