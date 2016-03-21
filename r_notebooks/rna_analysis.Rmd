@@ -39,9 +39,11 @@ for (xname in xlist) {
   stopifnot(isTRUE(all.equal(rownames(get(xname)), 
                              as.character(get(designobj)[,grep('sample', colnames(get(designobj)), ignore.case = TRUE)]))))
 }
+
 # generate train2test
 trainidx <- grep('train', get(designobj)[,'Train.Test'], ignore.case = TRUE)
 table(get(designobj)[,'Train.Test'])
+
 # generate labels
 effect.grps <- as.factor(get(designobj)[,grep('effect', colnames(get(designobj)), ignore.case = TRUE)])
 table(effect.grps[trainidx])
@@ -66,8 +68,9 @@ ylist <- c('new.grps')
 # SVM
 
 ```{r svm, cache = TRUE, message = FALSE}
-# kflist <- c('linear', 'kendall', 'rbf')
-kflist <- c('kendall')
+kflist <- list('rbf', 'kendall', 'linear', 
+               c('rbf','kendall'), c('linear', 'kendall'), c('linear', 'rbf'), 
+               c('linear', 'rbf', 'kendall'))
 res <- list()
 i <- 1
 for (xname in xlist) {
@@ -83,18 +86,20 @@ for (xname in xlist) {
 ```
 
 ```{r svm_plot}
+# score table
 dd <- data.frame()
 for (i in seq(length(res))) {
-  accind <- matrix(res[[i]]$accind, nrow = 1)
-  colnames(accind) <- names(res[[i]]$accind)
   dd <- rbind(dd, 
               data.frame(model = res[[i]]$model, kf = res[[i]]$kf, 
                          x_prefix = res[[i]]$x_prefix, y_prefix = res[[i]]$y_prefix, 
-                         acc = res[[i]]$acc, accind))
+                         scores = names(res[[i]]$scores),
+                         values = unname(res[[i]]$scores)))
 }
-dd
+split(dd, dd$scores)
+# plot
 for (yname in ylist) {
-  p1 <- ggplot(subset(dd, y_prefix == yname), aes(x = x_prefix, y = acc)) + 
+  dds <- subset(dd, dd$y_prefix == yname & grepl("(?=.*acc.*)(?=.*overall.*)", dd$scores, ignore.case = TRUE, perl = TRUE))
+  p1 <- ggplot(dds, aes(x = x_prefix, y = values)) + 
     geom_bar(aes(fill = x_prefix), stat="identity", position = "dodge") + 
     facet_wrap(~ kf) + ylim(0,1) + 
     ggtitle(paste0('predict for labels = ', yname)) + 

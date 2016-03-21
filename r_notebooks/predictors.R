@@ -3,46 +3,58 @@
 
 perfSVM <- function(model = 'ksvm', x_prefix = 'xdata', y_prefix = 'ydata', 
                     xdata, grp, tr2tstFolds, kf = c('linear', 'kendall', 'rbf', 'poly'), 
-                    Cpara_list = 10^(-3:3), nfolds = 5, nrepeats = 1, seed = 64649601){
+                    kmat = NULL, Cpara_list = 10^(-3:3), nfolds = 5, nrepeats = 1, seed = 64649601){
   ## model and prefix are characters that are stored to indicate which method is implemented but essentially do nothing
+  ## xdata n*p feature matrix (including training and test parts)
+  ## grp n-vector categorical labels
+  ## tr2tstFolds of class list (for ease of implementing cross-validation) recording indices of training samples
+  ## kf character of the kernel function. Can be multiple kernels then mean kernel values are used
   ## perfSVM basically runs multi-class kernel SVM
-  ## tr2tstFolds are training indices corresp to rows in xdata
   ## returns the average acc over tr2tstFolds with C parameter tuned by additional inner loop (seed set)
-
+  
   if (!is.null(seed)) set.seed(seed)
-
+  
   if (is.vector(tr2tstFolds)){
     tr2tstFolds <- list(tr2tstFolds)
   }
-
+  
   if (!is.character(kf)) stop('provide kernel function as a character')
-  kf <- match.arg(kf)
-
-  sigma <- sigest(xdata, scaled=F)['50%']
-
-  FUN <- switch(kf,
-                linear = vanilladot(),
-                kendall = cor.fk,
-                rbf = rbfdot(sigma = sigma),
-                poly = polydot(degree = 2, scale = 1, offset = 0))
-
-  kmat <- computeKernelMatrix(xdata = xdata, kf = FUN)
-
+  kf <- match.arg(kf, several.ok = TRUE)
+  
+  FUN <- list()
+  for (i in seq(length(kf))) {
+    FUN[[i]] <- switch(kf[i],
+                       linear = vanilladot(),
+                       kendall = cor.fk,
+                       rbf = rbfdot(sigma = unname(sigest(xdata, scaled=F)['50%'])),
+                       poly = polydot(degree = 2, scale = 1, offset = 0)
+                       )
+  }
+  
+  if (is.null(kmat)) {
+    message("Computing kernel matrix ... \n")
+    kmat <- lapply(FUN, function(func) computeKernelMatrix(xdata = xdata, kf = func))
+  } else if (!is.list(kmat)) {
+    kmat <- list(kmat)
+  }
+  
   # outter loop
   tr2tstfoldscore <- lapply(tr2tstFolds, function(indepfold){
+    # cv for tuning parameters
     foldIndices <- createMultiFolds(indepfold, k=nfolds, times=nrepeats)
 
     message("Cross-validating ", appendLF = TRUE)
     foldscore <- lapply(foldIndices, function(fold){
       message(' + New cv fold + ', appendLF = FALSE)
       # inner loop
-      kmcs <- centerScaleKernelMatrix(kmat[indepfold, indepfold], fold)
+      kmcs <- lapply(kmat, function(km) centerScaleKernelMatrix(km[indepfold, indepfold], fold))
+      kmcs <- Reduce('+', kmcs)/length(kmcs)
 
       ### SVM
       s <- sapply(Cpara_list, function(cpm){
         message('.', appendLF = FALSE)
         pred <- classifierSVM(km=kmcs, trainidx=fold, traingrp=grp[indepfold[fold]], cpm=cpm)
-        return(evaluateAcc(pred,grp[indepfold[-fold]]))
+        return(evaluateAcc(pred,grp[indepfold[-fold]])[1])
       })
 
       return(s)
@@ -52,23 +64,21 @@ perfSVM <- function(model = 'ksvm', x_prefix = 'xdata', y_prefix = 'ydata',
     names(cvacc) <- names(Cpara_list) # SVM cv score (varying C)
 
     message("\nIndependent-validating ", appendLF = TRUE)
-    kmcs <- centerScaleKernelMatrix(kmat, indepfold)
+    kmcs <- lapply(kmat, function(km) centerScaleKernelMatrix(km, indepfold))
+    kmcs <- Reduce('+', kmcs)/length(kmcs)
 
     cpm <- Cpara_list[which.max(cvacc)]
     pred <- classifierSVM(km=kmcs, trainidx=indepfold, traingrp=grp[indepfold], cpm=cpm)
-    acc <- evaluateAcc(pred,grp[-indepfold])
-    accind <- evaluateIndivAcc(pred,grp[-indepfold])
+    scores <- evaluateAcc(pred,grp[-indepfold])
 
     message('DONE!', appendLF = TRUE)
-    return(c(acc = acc, unlist(accind)))
+    return(scores)
   })
-  tr2tstfoldscore <- do.call('rbind', tr2tstfoldscore)
-  tr2tstfoldscore <- apply(tr2tstfoldscore, 2, mean, na.rm = TRUE)
-  acc <- tr2tstfoldscore[1]
-  accind <- tr2tstfoldscore[-1]
+  scores <- do.call('rbind', tr2tstfoldscore)
+  scores <- apply(scores, 2, mean, na.rm = TRUE)
 
-  return(list(model=model, x_prefix=x_prefix, y_prefix=y_prefix, kf=kf, Cpara_list=Cpara_list, 
-              acc=acc, accind = accind))
+  return(list(model=model, x_prefix=x_prefix, y_prefix=y_prefix, kf=paste(kf, collapse = '+'), 
+              Cpara_list=Cpara_list, scores=scores))
 }
 
 
@@ -76,7 +86,7 @@ perfSVM <- function(model = 'ksvm', x_prefix = 'xdata', y_prefix = 'ydata',
 
 classifierSVM <- function(km, trainidx, traingrp, cpm){
 
-  # classifierSVM returns a ntst-vector of predicted binary classes
+  # classifierSVM returns a ntst-vector of predicted classes
   # NOTE those indices not in trainidx is ready for test!!
   # NOTE that (row/sample) NAMES of kernel matrix is necessary for naming predicted vector
 
@@ -125,23 +135,37 @@ centerScaleKernelMatrix <- function(kmat, trainidx){
 # model evaluation --------------------------------------------------------
 
 evaluateAcc <- function(predictions,observations){
-  if(!is(predictions,"factor")) stop('Predictions are not factors!')
-  if(all(levels(predictions)==levels(observations)))
-    return(sum(predictions==observations,na.rm=T)/length(predictions))
-  else
-    stop('Predictions and observations have different levels!')
-}
-
-evaluateIndivAcc <- function(predictions,observations)
-{
-  classes <- sort(unique(as.character(observations)))
-  accind <- list()
-  for (classname in classes) {
-    id <- which(as.character(observations) == classname)
-    s <- sum(as.character(predictions)[id] == classname) / length(id) # similar to True Positive
-    accind[[classname]] <- ifelse(is.na(s), 0, s)
+  ## evaluate not only acc ^_^
+  
+  if(!is(predictions,"factor")){
+    stop('Predictions need to be factors!')
+  } else{
+    stopifnot(all(levels(predictions)%in%levels(observations)))
+    observations <- as.character(observations)
+    predictions <- as.character(predictions)
   }
-  return(accind)
+  
+  classes <- sort(unique(observations))
+  accind <- list()
+  ppvind <- list()
+  
+  # overall
+  acc <- sum(predictions==observations, na.rm = TRUE) / length(predictions)
+  # individuals
+  for (cl in classes) {
+    id.ob <- which(observations == cl)
+    id.pr <- which(predictions == cl)
+    # acc (TPR)
+    s <- sum(predictions[id.ob] == cl) / length(id.ob)
+    accind[[cl]] <- ifelse(is.na(s), 0, s)
+    # ppv (precision)
+    s <- sum(observations[id.pr] == cl) / length(id.pr)
+    ppvind[[cl]] <- ifelse(is.na(s), 0, s)
+  }
+  
+  scores <- c(acc = c(overall = acc, unlist(accind)), # make sure acc.overall is the first
+              precision = c(unlist(ppvind)))
+  return(scores)
 }
 
 # remove constants --------------------------------------------------------
