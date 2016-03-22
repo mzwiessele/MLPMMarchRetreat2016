@@ -1,41 +1,68 @@
 # Notebook : MLPM retreat Valencia
 
 ```{r setup, message = FALSE}
-knitr::opts_chunk$set(error = FALSE, warning = FALSE, fig.width = 12, fig.height = 8, dev = "pdf", fig.keep = "high", fig.path = "figure/", cache.path = "cache/")
+knitr::opts_chunk$set(error = FALSE, warning = FALSE, fig.width = 12, fig.height = 8, dev = "pdf", fig.keep = "high", fig.path = "rnaseq-sparseSVM-figure/", cache.path = "rnaseq-sparseSVM-cache/")
 set.seed(35875954)
 
 library(caret)
 library(pcaPP)
 library(kernlab)
 source('predictors.R')
+
+datapath <- '../Data/RNASeq/'
 ```
 
 # Load data
 
 ```{r data, cache = TRUE}
 # read in datasets
-datapath <- '../Data/RNASeq/'
 fnames <- list.files(path = datapath, pattern = '[.]csv$', full.names = FALSE)
 objnames <- gsub('[.]csv$', '', fnames)
 for (obj in objnames) {
   x <- read.csv(paste0(datapath, obj, '.csv'), sep = ',', header = TRUE, row.names = 1)
   rownames(x) <- paste0('X_', gsub('[^[:alnum:]_]', '_', rownames(x)))
-  if (!grepl('design', obj)) x <- t(x) # observations in rows and features in col
+  # a bit further modification
+  if (grepl('design', obj)) {
+    colnames(x) <- gsub('NA[.]', 'Train.Test', colnames(x))
+  } else {
+    x <- t(x) # observations in rows and features in col
+  }
   assign(obj, x)
   cat('==============> ', obj, '<==============\n')
   print(dim(get(obj)))
 }
 # just some checking on samplelist
 xlist <- objnames[!grepl('design', objnames)]
+designobj <- setdiff(objnames, xlist)
+stopifnot(length(designobj) == 1)
 for (xname in xlist) {
-  stopifnot(isTRUE(all.equal(rownames(get(xname)), as.character(as.character(rnaseq_design$SampleID_RNASeq)))))
+  stopifnot(isTRUE(all.equal(rownames(get(xname)), 
+                             as.character(get(designobj)[,grep('sample', colnames(get(designobj)), ignore.case = TRUE)]))))
 }
+
 # generate train2test
-trainidx <- grep('train', rnaseq_design$NA., ignore.case = TRUE)
-table(rnaseq_design$NA.)
+trainidx <- grep('train', get(designobj)[,'Train.Test'], ignore.case = TRUE)
+table(get(designobj)[,'Train.Test'])
+
 # generate labels
-effect.grps <- as.factor(rnaseq_design$Effect)
-ylist <- c('effect.grps')
+effect.grps <- as.factor(get(designobj)[,grep('effect', colnames(get(designobj)), ignore.case = TRUE)])
+table(effect.grps[trainidx])
+table(effect.grps[-trainidx])
+# groups with unknown labels
+ratio <- 0.25
+key <- 'unknown'
+new.grps <- as.character(effect.grps)
+train.char <- unique(new.grps[trainidx])
+test.char <- unique(new.grps[-trainidx])
+idx <- split(trainidx, factor(new.grps[trainidx]))
+for (i in seq(length(idx))) {
+  new.grps[sample(idx[[i]], ceiling(length(idx[[i]]) * ratio))] <- key # train
+}
+new.grps[which(new.grps %in% setdiff(test.char, train.char))] <- key # test
+new.grps <- as.factor(new.grps)
+table(new.grps[trainidx])
+table(new.grps[-trainidx])
+ylist <- c('new.grps')
 ```
 
 # SVM
@@ -58,12 +85,14 @@ for (xname in xlist) {
 # Plot
 
 ```{r plot}
-dd <- data.frame()
+dd <- NULL
 for (i in seq(length(res))) {
-  dd <- rbind(dd,
-              data.frame(model = res[[i]]$model, prefix = res[[i]]$prefix, acc = res[[i]]$acc))
+  dd <- rbind(dd, c(model = res[[i]]$model, prefix = res[[i]]$prefix, res[[i]]$scores))
 }
-ggplot(dd, aes(x = prefix, y = acc)) +
+
+dd <- data.frame(dd[,1:2], apply(dd[,-(1:2)], 2, as.numeric))
+
+ggplot(dd, aes(x = prefix, y = acc.overall)) +
   geom_bar(aes(fill = prefix), stat="identity") +
   theme(axis.text.x = element_blank())
 ```

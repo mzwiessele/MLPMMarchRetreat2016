@@ -1,8 +1,8 @@
 
 # train-test --------------------------------------------------------------
 
-perfSVM <- function(model = 'ksvm', x_prefix = 'xdata', y_prefix = 'ydata', 
-                    xdata, grp, tr2tstFolds, kf = c('linear', 'kendall', 'rbf', 'poly'), 
+perfSVM <- function(model = 'ksvm', x_prefix = 'xdata', y_prefix = 'ydata',
+                    xdata, grp, tr2tstFolds, kf = c('linear', 'kendall', 'rbf', 'poly'),
                     kmat = NULL, Cpara_list = 10^seq(-2,2,0.4), nfolds = 5, nrepeats = 1, seed = 64649601){
   ## model and prefix are characters that are stored to indicate which method is implemented but essentially do nothing
   ## xdata n*p feature matrix (including training and test parts)
@@ -11,16 +11,16 @@ perfSVM <- function(model = 'ksvm', x_prefix = 'xdata', y_prefix = 'ydata',
   ## kf character of the kernel function. Can be multiple kernels then mean kernel values are used
   ## perfSVM basically runs multi-class kernel SVM
   ## returns the average acc over tr2tstFolds with C parameter tuned by additional inner loop (seed set)
-  
+
   if (!is.null(seed)) set.seed(seed)
-  
+
   if (is.vector(tr2tstFolds)){
     tr2tstFolds <- list(tr2tstFolds)
   }
-  
+
   if (!is.character(kf)) stop('provide kernel function as a character')
   kf <- match.arg(kf, several.ok = TRUE)
-  
+
   FUN <- list()
   for (i in seq(length(kf))) {
     FUN[[i]] <- switch(kf[i],
@@ -30,14 +30,14 @@ perfSVM <- function(model = 'ksvm', x_prefix = 'xdata', y_prefix = 'ydata',
                        poly = polydot(degree = 2, scale = 1, offset = 0)
                        )
   }
-  
+
   if (is.null(kmat)) {
     message("Computing kernel matrix ... \n")
     kmat <- lapply(FUN, function(func) computeKernelMatrix(xdata = xdata, kf = func))
   } else if (!is.list(kmat)) {
     kmat <- list(kmat)
   }
-  
+
   # outter loop
   tr2tstfoldscore <- lapply(tr2tstFolds, function(indepfold){
     # cv for tuning parameters
@@ -77,7 +77,7 @@ perfSVM <- function(model = 'ksvm', x_prefix = 'xdata', y_prefix = 'ydata',
   scores <- do.call('rbind', tr2tstfoldscore)
   scores <- apply(scores, 2, mean, na.rm = TRUE)
 
-  return(list(model=model, x_prefix=x_prefix, y_prefix=y_prefix, kf=paste(kf, collapse = '+'), 
+  return(list(model=model, x_prefix=x_prefix, y_prefix=y_prefix, kf=paste(kf, collapse = '+'),
               Cpara_list=Cpara_list, scores=scores))
 }
 
@@ -136,7 +136,7 @@ centerScaleKernelMatrix <- function(kmat, trainidx){
 
 evaluateAcc <- function(predictions,observations){
   ## evaluate not only acc ^_^
-  
+
   if(!is(predictions,"factor")){
     stop('Predictions need to be factors!')
   } else{
@@ -144,11 +144,11 @@ evaluateAcc <- function(predictions,observations){
     observations <- as.character(observations)
     predictions <- as.character(predictions)
   }
-  
+
   classes <- sort(unique(observations))
   accind <- list()
   ppvind <- list()
-  
+
   # overall
   acc <- sum(predictions==observations, na.rm = TRUE) / length(predictions)
   # individuals
@@ -162,7 +162,7 @@ evaluateAcc <- function(predictions,observations){
     s <- sum(observations[id.pr] == cl) / length(id.pr)
     ppvind[[cl]] <- ifelse(is.na(s), 0, s)
   }
-  
+
   scores <- c(acc = c(overall = acc, unlist(accind)), # make sure acc.overall is the first
               precision = c(unlist(ppvind)))
   return(scores)
@@ -296,7 +296,7 @@ perfSparseSVM <- function(model = 'kPasrseSVM',
                           xtst = xtr.xtst$xtst,
                           ytr = grp[indepfold[fold]],
                           cost = cpm)
-        return(evaluateAcc(pred, grp[indepfold[-fold]]))
+        return(evaluateAcc(pred,grp[indepfold[-fold]])[1])
       })
       return(s)
     })
@@ -311,13 +311,14 @@ perfSparseSVM <- function(model = 'kPasrseSVM',
                       xtst = xtr.xtst$xtst,
                       ytr = grp[indepfold],
                       cost = cpm)
-    acc <- evaluateAcc(pred, grp[-indepfold])
+    scores <- evaluateAcc(pred,grp[-indepfold])
 
     message('DONE!', appendLF = TRUE)
-    return(acc)
+    return(scores)
   })
-  acc <- mean(unlist(tr2tstfoldscore), na.rm = TRUE)
+  scores <- do.call('rbind', tr2tstfoldscore)
+  scores <- apply(scores, 2, mean, na.rm = TRUE)
 
-  return(list(model=model, prefix=prefix, acc=acc))
+  return(list(model=model, prefix=prefix, scores=scores))
 }
 
